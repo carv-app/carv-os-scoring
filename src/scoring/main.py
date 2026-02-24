@@ -2,6 +2,7 @@ import os
 from contextlib import asynccontextmanager
 
 import structlog
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from google.cloud import pubsub_v1
 from google.cloud.firestore import AsyncClient
@@ -9,6 +10,11 @@ from google.cloud.firestore import AsyncClient
 from scoring.api.routes import router
 from scoring.config import get_settings
 from scoring.observability.setup import init_observability
+
+# Load .env into os.environ so that PUBSUB_EMULATOR_HOST (read directly
+# by the google-cloud-pubsub client) and other vars are available before
+# any client is constructed.  Existing env vars are NOT overwritten.
+load_dotenv()
 
 structlog.configure(
     processors=[
