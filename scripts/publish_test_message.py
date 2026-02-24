@@ -2,7 +2,7 @@
 
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from google.cloud import pubsub_v1
 
@@ -27,7 +27,7 @@ def main():
         "eventName": "uats.application.created",
         "workspaceId": workspace_id,
         "integrationId": "manual-test",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "data": [
             {
                 "id": f"app-{candidate_ref_id}-{vacancy_ref_id}",
@@ -44,7 +44,7 @@ def main():
     message_id = future.result()
 
     print(f"Published message {message_id} to {topic_path}")
-    print(f"  event: uats.application.created")
+    print("  event: uats.application.created")
     print(f"  candidateReferenceId: {candidate_ref_id}")
     print(f"  vacancyReferenceId: {vacancy_ref_id}")
     print(f"  workspaceId: {workspace_id}")

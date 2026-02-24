@@ -1,4 +1,7 @@
-"""Seed Firestore with sample candidate and vacancy data in workspace-scoped paths."""
+"""Seed Firestore with sample candidate and vacancy data in workspace-scoped paths.
+
+Uses camelCase field names to match the real Carv platform ATS data model.
+"""
 
 import json
 import sys
@@ -31,7 +34,8 @@ def main():
         "address": "Amsterdam, Netherlands",
         "job": {"title": "Verpleegkundige", "company": "Zorggroep West"},
         "source": "recruiter",
-        "workspace_id": WORKSPACE_ID,
+        "profileUrl": "",
+        "workspaceId": WORKSPACE_ID,
     }
     (
         db.collection("Workspaces")
@@ -43,7 +47,6 @@ def main():
     print(f"Seeded candidate: /Workspaces/{WORKSPACE_ID}/Candidates/{CANDIDATE_REFERENCE_ID}")
 
     # Seed AtsDocuments at /Workspaces/{WID}/Candidate/{CID}/AtsDocuments
-    # Load sources.json for resume content if available
     sources_path = PROJECT_ROOT / "sources.json"
     resume_content = ""
     if sources_path.exists():
@@ -66,9 +69,12 @@ def main():
     if resume_content:
         ats_docs_ref.document("resume").set({"resume": resume_content})
     if job_desc:
-        ats_docs_ref.document("jobDescription").set({"jobDescription": job_desc})
+        ats_docs_ref.document("jobDescription").set(
+            {"jobDescription": job_desc}
+        )
     print(
-        f"Seeded AtsDocuments: /Workspaces/{WORKSPACE_ID}/Candidate/{CANDIDATE_REFERENCE_ID}/AtsDocuments"
+        f"Seeded AtsDocuments: /Workspaces/{WORKSPACE_ID}"
+        f"/Candidate/{CANDIDATE_REFERENCE_ID}/AtsDocuments"
     )
 
     # Seed vacancy at /Workspaces/{WID}/ATSVacancies/{VID}
@@ -77,12 +83,18 @@ def main():
         "id": VACANCY_REFERENCE_ID,
         "title": "Tandartsassistent / Orthoassistent",
         "description": vacancy_description,
-        "hard_requirements": "BIG registratie, MBO4 Tandartsassistent",
-        "soft_requirements": "Teamplayer, communicatief sterk",
-        "about_company": "Moderne tandartspraktijk in het Westland",
-        "address": {"city": "Westland", "country": "Netherlands"},
+        "hardRequirements": "BIG registratie, MBO4 Tandartsassistent",
+        "softRequirements": "Teamplayer, communicatief sterk",
+        "aboutCompany": "Moderne tandartspraktijk in het Westland",
+        "address": {
+            "address1": "",
+            "city": "Westland",
+            "zip": "",
+            "country": "Netherlands",
+            "countryCode": "NL",
+        },
         "status": "open",
-        "workspace_id": WORKSPACE_ID,
+        "workspaceId": WORKSPACE_ID,
     }
     (
         db.collection("Workspaces")
