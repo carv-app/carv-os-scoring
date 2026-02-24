@@ -9,13 +9,11 @@ class Settings(BaseSettings):
     gcp_region: str = "europe-west1"
 
     # Gemini
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash"
     gemini_temperature: float = 0.1
-    gemini_max_tokens: int = 1024
+    gemini_max_tokens: int = 16384 #65535 default
 
     # Firestore collections
-    candidates_collection: str = "candidates"
-    vacancies_collection: str = "vacancies"
     scoring_results_collection: str = "scoring_results"
 
     # Pub/Sub topics (for publishing score events)

@@ -7,10 +7,11 @@ from scoring.services.scoring import ScoringService
 
 
 @pytest.fixture
-def mock_repo(sample_candidate, sample_vacancy):
+def mock_repo(sample_candidate, sample_vacancy, sample_ats_documents):
     repo = AsyncMock()
     repo.get_candidate.return_value = sample_candidate
     repo.get_vacancy.return_value = sample_vacancy
+    repo.get_ats_documents.return_value = sample_ats_documents
     repo.save_scoring_result.return_value = "doc-123"
     return repo
 
@@ -50,8 +51,9 @@ async def test_process_success(mock_repo, mock_llm, mock_publisher):
     assert result.workspace_id == "ws-1"
     assert result.reasoning == "Moderate fit due to field mismatch."
 
-    mock_repo.get_candidate.assert_awaited_once_with("cand-1")
-    mock_repo.get_vacancy.assert_awaited_once_with("vac-1")
+    mock_repo.get_candidate.assert_awaited_once_with("ws-1", "cand-1")
+    mock_repo.get_vacancy.assert_awaited_once_with("ws-1", "vac-1")
+    mock_repo.get_ats_documents.assert_awaited_once_with("ws-1", "cand-1")
     mock_llm.score_candidate.assert_awaited_once()
     mock_repo.save_scoring_result.assert_awaited_once()
     mock_publisher.publish_score_calculated.assert_called_once()

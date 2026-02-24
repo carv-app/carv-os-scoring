@@ -2,7 +2,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-
 # --- Pub/Sub push envelope (wraps all events) ---
 
 
@@ -21,10 +20,12 @@ class PubSubEnvelope(BaseModel):
 # --- UATS event models ---
 
 
-class ApplicationEventData(BaseModel):
-    id: str = Field(alias="id")
-    candidate_id: str = Field(alias="candidateId")
-    vacancy_id: str = Field(alias="vacancyId")
+class ATSCandidateVacancyApplication(BaseModel):
+    id: str
+    candidate_reference_id: str = Field(alias="candidateReferenceId")
+    vacancy_reference_id: str = Field(alias="vacancyReferenceId")
+    status: str = ""
+    workspace_id: str = Field(alias="workspaceId", default="")
 
     model_config = {"populate_by_name": True}
 
@@ -62,23 +63,60 @@ class ScoreEvent(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-# --- Firestore document models ---
+# --- Firestore ATS document models ---
 
 
-class CandidateSource(BaseModel):
-    source_label: str
-    source_content: str
-    source_metadata: dict = Field(default_factory=dict)
+class CandidateJob(BaseModel):
+    title: str = ""
+    company: str = ""
 
 
-class CandidateDocument(BaseModel):
+class ATSCandidate(BaseModel):
+    id: str = ""
     name: str = ""
-    sources: list[CandidateSource] = Field(default_factory=list)
+    firstname: str = ""
+    lastname: str = ""
+    email: str = ""
+    phone: str = ""
+    address: str = ""
+    job: CandidateJob = Field(default_factory=CandidateJob)
+    source: str = ""
+    profile_url: str = Field(alias="profileUrl", default="")
+    resume_url: str = Field(alias="resumeUrl", default="")
+    workspace_id: str = Field(alias="workspaceId", default="")
+
+    model_config = {"populate_by_name": True}
 
 
-class VacancyDocument(BaseModel):
-    title: str
-    description: str
+class ATSVacancyAddress(BaseModel):
+    street: str = Field(alias="address1", default="")
+    city: str = ""
+    zip_code: str = Field(alias="zip", default="")
+    country: str = ""
+
+    model_config = {"populate_by_name": True}
+
+
+class ATSVacancy(BaseModel):
+    id: str = ""
+    title: str = ""
+    description: str = ""
+    hard_requirements: str = Field(alias="hardRequirements", default="")
+    soft_requirements: str = Field(alias="softRequirements", default="")
+    about_company: str = Field(alias="aboutCompany", default="")
+    address: ATSVacancyAddress = Field(default_factory=ATSVacancyAddress)
+    status: str = ""
+    workspace_id: str = Field(alias="workspaceId", default="")
+
+    model_config = {"populate_by_name": True}
+
+
+class AtsDocuments(BaseModel):
+    resume: str | None = None
+    job_description: str | None = Field(alias="jobDescription", default=None)
+    assessment: str | None = None
+
+    model_config = {"populate_by_name": True}
 
 
 # --- LLM response ---

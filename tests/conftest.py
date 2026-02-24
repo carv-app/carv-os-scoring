@@ -21,30 +21,48 @@ def settings():
 
 @pytest.fixture
 def sample_candidate():
-    from scoring.models import CandidateDocument, CandidateSource
+    from scoring.models import ATSCandidate, CandidateJob
 
-    return CandidateDocument(
+    return ATSCandidate(
+        id="cand-1",
         name="Thomas van den Berg-Smit",
-        sources=[
-            CandidateSource(
-                source_label="CV",
-                source_content="HBO Verpleegkunde, 6 jaar ervaring in de zorg.",
-                source_metadata={"document_type": "CV"},
-            ),
-            CandidateSource(
-                source_label="Interview",
-                source_content="Kandidaat zoekt werk in ouderenzorg, beschikbaar per direct.",
-                source_metadata={},
-            ),
-        ],
+        firstname="Thomas",
+        lastname="van den Berg-Smit",
+        email="thomas@example.com",
+        phone="+31612345678",
+        address="Amsterdam, Netherlands",
+        job=CandidateJob(title="Verpleegkundige", company="Zorggroep West"),
+        source="recruiter",
+        workspace_id="ws-1",
     )
 
 
 @pytest.fixture
 def sample_vacancy():
-    from scoring.models import VacancyDocument
+    from scoring.models import ATSVacancy, ATSVacancyAddress
 
-    return VacancyDocument(
+    return ATSVacancy(
+        id="vac-1",
         title="Tandartsassistent",
         description="Zoek tandartsassistenten voor moderne praktijk in regio Westland.",
+        hard_requirements="BIG registratie, MBO4 Tandartsassistent",
+        soft_requirements="Teamplayer, communicatief sterk",
+        about_company="Moderne tandartspraktijk in het Westland",
+        address=ATSVacancyAddress(
+            city="Westland",
+            country="Netherlands",
+        ),
+        status="open",
+        workspace_id="ws-1",
+    )
+
+
+@pytest.fixture
+def sample_ats_documents():
+    from scoring.models import AtsDocuments
+
+    return AtsDocuments(
+        resume="HBO Verpleegkunde, 6 jaar ervaring in de zorg.",
+        job_description="Tandartsassistent gezocht voor 32 uur per week.",
+        assessment="Kandidaat zoekt werk in ouderenzorg, beschikbaar per direct.",
     )

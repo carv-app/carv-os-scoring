@@ -4,7 +4,7 @@ from google.genai import types
 from opentelemetry import trace
 
 from scoring.config import Settings
-from scoring.models import CandidateDocument, LLMScoringResponse, VacancyDocument
+from scoring.models import ATSCandidate, AtsDocuments, ATSVacancy, LLMScoringResponse
 from scoring.services.prompt import SYSTEM_PROMPT, build_user_prompt
 
 logger = structlog.get_logger()
@@ -21,12 +21,15 @@ class LLMService:
         )
 
     async def score_candidate(
-        self, candidate: CandidateDocument, vacancy: VacancyDocument
+        self,
+        candidate: ATSCandidate,
+        vacancy: ATSVacancy,
+        ats_documents: AtsDocuments,
     ) -> tuple[LLMScoringResponse, dict]:
         with tracer.start_as_current_span("llm.score") as span:
             span.set_attribute("llm.model", self._settings.gemini_model)
 
-            user_prompt = build_user_prompt(candidate, vacancy)
+            user_prompt = build_user_prompt(candidate, vacancy, ats_documents)
 
             response = await self._client.aio.models.generate_content(
                 model=self._settings.gemini_model,

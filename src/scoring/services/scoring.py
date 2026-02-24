@@ -1,6 +1,6 @@
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from opentelemetry import trace
@@ -33,31 +33,34 @@ class ScoringService:
     async def process(
         self,
         application_id: str,
-        candidate_id: str,
-        vacancy_id: str,
+        candidate_reference_id: str,
+        vacancy_reference_id: str,
         workspace_id: str,
     ) -> ScoringResult:
         with tracer.start_as_current_span("scoring.process") as span:
             span.set_attribute("application_id", application_id)
-            span.set_attribute("candidate_id", candidate_id)
-            span.set_attribute("vacancy_id", vacancy_id)
+            span.set_attribute("candidate_reference_id", candidate_reference_id)
+            span.set_attribute("vacancy_reference_id", vacancy_reference_id)
 
             try:
-                candidate, vacancy = await asyncio.gather(
-                    self._repo.get_candidate(candidate_id),
-                    self._repo.get_vacancy(vacancy_id),
+                candidate, vacancy, ats_documents = await asyncio.gather(
+                    self._repo.get_candidate(workspace_id, candidate_reference_id),
+                    self._repo.get_vacancy(workspace_id, vacancy_reference_id),
+                    self._repo.get_ats_documents(workspace_id, candidate_reference_id),
                 )
 
                 start = time.monotonic()
-                llm_response, token_usage = await self._llm.score_candidate(candidate, vacancy)
+                llm_response, token_usage = await self._llm.score_candidate(
+                    candidate, vacancy, ats_documents
+                )
                 latency_ms = int((time.monotonic() - start) * 1000)
 
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
 
                 result = ScoringResult(
                     application_id=application_id,
-                    candidate_id=candidate_id,
-                    vacancy_id=vacancy_id,
+                    candidate_id=candidate_reference_id,
+                    vacancy_id=vacancy_reference_id,
                     workspace_id=workspace_id,
                     score=llm_response.score,
                     reasoning=llm_response.reasoning,
@@ -72,8 +75,8 @@ class ScoringService:
                 # Publish carv.score.calculated event
                 score_data = ScoreCalculatedEventData(
                     application_id=application_id,
-                    candidate_id=candidate_id,
-                    vacancy_id=vacancy_id,
+                    candidate_id=candidate_reference_id,
+                    vacancy_id=vacancy_reference_id,
                     score=result.score,
                     reasoning=result.reasoning,
                     model=result.model,
@@ -91,8 +94,8 @@ class ScoringService:
                 logger.info(
                     "candidate_scored",
                     application_id=application_id,
-                    candidate_id=candidate_id,
-                    vacancy_id=vacancy_id,
+                    candidate_reference_id=candidate_reference_id,
+                    vacancy_reference_id=vacancy_reference_id,
                     score=result.score,
                     latency_ms=latency_ms,
                 )
@@ -104,8 +107,8 @@ class ScoringService:
                 logger.error(
                     "scoring_failed",
                     application_id=application_id,
-                    candidate_id=candidate_id,
-                    vacancy_id=vacancy_id,
+                    candidate_reference_id=candidate_reference_id,
+                    vacancy_reference_id=vacancy_reference_id,
                     error=str(e),
                 )
                 raise

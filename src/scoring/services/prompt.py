@@ -1,12 +1,14 @@
-from scoring.models import CandidateDocument, VacancyDocument
+from scoring.models import ATSCandidate, AtsDocuments, ATSVacancy
 
-SYSTEM_PROMPT = """You are an expert recruitment analyst. Your task is to evaluate how well a candidate \
-fits a specific vacancy. Analyze all provided candidate information against the vacancy requirements \
-and produce a numerical score with clear reasoning.
+SYSTEM_PROMPT = """\
+You are an expert recruitment analyst. Your task is to evaluate how well a candidate
+fits a specific vacancy. Analyze all provided candidate information against the vacancy
+requirements and produce a numerical score with clear reasoning.
 
 ## Scoring Criteria
 Evaluate the candidate across these dimensions:
-1. **Skills match** — Does the candidate have the required skills, certifications, and qualifications?
+1. **Skills match** — Does the candidate have the required skills, certifications,
+and qualifications?
 2. **Experience relevance** — Is the candidate's work history relevant to the role?
 3. **Availability & schedule** — Can the candidate work the required hours and days?
 4. **Location & commute** — Is the candidate within reasonable distance or willing to commute?
@@ -27,19 +29,58 @@ Evaluate the candidate across these dimensions:
 - Provide 2-4 sentences of reasoning explaining the score."""
 
 
-def build_user_prompt(candidate: CandidateDocument, vacancy: VacancyDocument) -> str:
+def build_user_prompt(
+    candidate: ATSCandidate,
+    vacancy: ATSVacancy,
+    ats_documents: AtsDocuments,
+) -> str:
     parts = []
 
+    # --- Candidate section ---
     parts.append("## Candidate Information")
-    if candidate.name:
-        parts.append(f"**Name**: {candidate.name}")
+    name = candidate.name or f"{candidate.firstname} {candidate.lastname}".strip()
+    if name:
+        parts.append(f"**Name**: {name}")
+    if candidate.email:
+        parts.append(f"**Email**: {candidate.email}")
+    if candidate.phone:
+        parts.append(f"**Phone**: {candidate.phone}")
+    if candidate.address:
+        parts.append(f"**Address**: {candidate.address}")
+    if candidate.job and (candidate.job.title or candidate.job.company):
+        role_parts = []
+        if candidate.job.title:
+            role_parts.append(candidate.job.title)
+        if candidate.job.company:
+            role_parts.append(f"at {candidate.job.company}")
+        parts.append(f"**Current role**: {' '.join(role_parts)}")
 
-    for source in candidate.sources:
-        parts.append(f"\n### Source: {source.source_label}")
-        parts.append(source.source_content)
+    # --- Documents section ---
+    if ats_documents.resume:
+        parts.append("\n### Resume")
+        parts.append(ats_documents.resume)
+    if ats_documents.job_description:
+        parts.append("\n### Job Description")
+        parts.append(ats_documents.job_description)
+    if ats_documents.assessment:
+        parts.append("\n### Assessment")
+        parts.append(ats_documents.assessment)
 
+    # --- Vacancy section ---
     parts.append("\n## Vacancy Description")
-    parts.append(f"**Title**: {vacancy.title}")
-    parts.append(vacancy.description)
+    if vacancy.title:
+        parts.append(f"**Title**: {vacancy.title}")
+    if vacancy.description:
+        parts.append(vacancy.description)
+    if vacancy.hard_requirements:
+        parts.append(f"\n**Hard Requirements**: {vacancy.hard_requirements}")
+    if vacancy.soft_requirements:
+        parts.append(f"\n**Soft Requirements**: {vacancy.soft_requirements}")
+    if vacancy.about_company:
+        parts.append(f"\n**About the Company**: {vacancy.about_company}")
+    addr = vacancy.address
+    if addr and (addr.city or addr.country):
+        location_parts = [p for p in [addr.street, addr.city, addr.zip_code, addr.country] if p]
+        parts.append(f"\n**Location**: {', '.join(location_parts)}")
 
     return "\n".join(parts)

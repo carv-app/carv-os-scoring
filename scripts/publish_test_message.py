@@ -11,13 +11,13 @@ def main():
     if len(sys.argv) < 2:
         print(
             "Usage: python publish_test_message.py <gcp-project-id> "
-            "[candidate-id] [vacancy-id] [workspace-id]"
+            "[candidate-ref-id] [vacancy-ref-id] [workspace-id]"
         )
         sys.exit(1)
 
     project_id = sys.argv[1]
-    candidate_id = sys.argv[2] if len(sys.argv) > 2 else "candidate-001"
-    vacancy_id = sys.argv[3] if len(sys.argv) > 3 else "vacancy-001"
+    candidate_ref_id = sys.argv[2] if len(sys.argv) > 2 else "candidate-001"
+    vacancy_ref_id = sys.argv[3] if len(sys.argv) > 3 else "vacancy-001"
     workspace_id = sys.argv[4] if len(sys.argv) > 4 else "workspace-001"
 
     publisher = pubsub_v1.PublisherClient()
@@ -28,11 +28,15 @@ def main():
         "workspaceId": workspace_id,
         "integrationId": "manual-test",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "data": {
-            "id": f"app-{candidate_id}-{vacancy_id}",
-            "candidateId": candidate_id,
-            "vacancyId": vacancy_id,
-        },
+        "data": [
+            {
+                "id": f"app-{candidate_ref_id}-{vacancy_ref_id}",
+                "candidateReferenceId": candidate_ref_id,
+                "vacancyReferenceId": vacancy_ref_id,
+                "status": "new",
+                "workspaceId": workspace_id,
+            },
+        ],
     }
 
     message_data = json.dumps(event).encode("utf-8")
@@ -41,8 +45,8 @@ def main():
 
     print(f"Published message {message_id} to {topic_path}")
     print(f"  event: uats.application.created")
-    print(f"  candidateId: {candidate_id}")
-    print(f"  vacancyId: {vacancy_id}")
+    print(f"  candidateReferenceId: {candidate_ref_id}")
+    print(f"  vacancyReferenceId: {vacancy_ref_id}")
     print(f"  workspaceId: {workspace_id}")
 
 
