@@ -1,0 +1,6 @@
+project_id    = "your-gcp-project-id"
+region        = "europe-west1"
+scoring_image = "europe-west1-docker.pkg.dev/your-gcp-project-id/scoring/scoring-worker:latest"
+
+# Optional: set to a notification channel ID for alerts
+# alert_notification_channel = "projects/your-project/notificationChannels/1234567890"
