@@ -35,7 +35,7 @@ class UATSEvent(BaseModel):
     workspace_id: str = Field(alias="workspaceId")
     integration_id: str = Field(alias="integrationId", default="")
     timestamp: str = ""
-    data: dict | list = Field(default_factory=dict)
+    data: dict = Field(default_factory=dict)
 
     model_config = {"populate_by_name": True}
 
@@ -125,6 +125,16 @@ class AtsDocuments(BaseModel):
 class LLMScoringResponse(BaseModel):
     score: int = Field(ge=0, le=100)
     reasoning: str
+
+
+# --- Score request (HTTP API) ---
+
+
+class ScoreRequest(BaseModel):
+    workspace_id: str
+    candidate_reference_id: str
+    vacancy_reference_id: str
+    application_id: str
 
 
 # --- Scoring result ---

@@ -8,6 +8,7 @@ from google.cloud import pubsub_v1
 from google.cloud.firestore import AsyncClient
 
 from scoring.api.routes import router
+from scoring.api.scores import router as scores_router
 from scoring.config import get_settings
 from scoring.observability.setup import init_observability
 
@@ -78,3 +79,4 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Candidate Scoring Service", lifespan=lifespan)
 app.include_router(router)
+app.include_router(scores_router)

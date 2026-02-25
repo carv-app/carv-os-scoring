@@ -70,14 +70,62 @@ class FirestoreRepository:
 
     async def save_scoring_result(self, result: ScoringResult) -> str:
         with tracer.start_as_current_span("firestore.save_result"):
-            _, doc_ref = await self._client.collection(
-                self._settings.scoring_results_collection
-            ).add(result.model_dump())
+            doc_ref = (
+                self._client.collection("Workspaces")
+                .document(result.workspace_id)
+                .collection("CandidateVacancyApplicationScores")
+                .document(result.application_id)
+            )
+            await doc_ref.set(result.model_dump())
             logger.info(
                 "scoring_result_saved",
                 doc_id=doc_ref.id,
+                workspace_id=result.workspace_id,
+                application_id=result.application_id,
                 candidate_id=result.candidate_id,
                 vacancy_id=result.vacancy_id,
                 score=result.score,
             )
             return doc_ref.id
+
+    async def get_scoring_result(
+        self, workspace_id: str, application_id: str
+    ) -> ScoringResult:
+        with tracer.start_as_current_span("firestore.get_scoring_result"):
+            doc = await (
+                self._client.collection("Workspaces")
+                .document(workspace_id)
+                .collection("CandidateVacancyApplicationScores")
+                .document(application_id)
+                .get()
+            )
+            if not doc.exists:
+                raise ValueError(
+                    f"Scoring result for application {application_id} "
+                    f"not found in workspace {workspace_id}"
+                )
+            return ScoringResult(**doc.to_dict())
+
+    async def query_scoring_results(
+        self,
+        workspace_id: str,
+        candidate_id: str | None = None,
+        vacancy_id: str | None = None,
+        limit: int = 50,
+    ) -> list[ScoringResult]:
+        with tracer.start_as_current_span("firestore.query_scoring_results"):
+            query = (
+                self._client.collection("Workspaces")
+                .document(workspace_id)
+                .collection("CandidateVacancyApplicationScores")
+            )
+            if candidate_id:
+                query = query.where("candidate_id", "==", candidate_id)
+            if vacancy_id:
+                query = query.where("vacancy_id", "==", vacancy_id)
+            query = query.order_by("scored_at", direction="DESCENDING").limit(limit)
+
+            results = []
+            async for doc in query.stream():
+                results.append(ScoringResult(**doc.to_dict()))
+            return results

@@ -13,9 +13,6 @@ class Settings(BaseSettings):
     gemini_temperature: float = 0.1
     gemini_max_tokens: int = 16384 #65535 default
 
-    # Firestore collections
-    scoring_results_collection: str = "scoring_results"
-
     # Pub/Sub topics (for publishing score events)
     score_calculated_topic: str = "carv.score.calculated"
     score_failed_topic: str = "carv.score.failed"
