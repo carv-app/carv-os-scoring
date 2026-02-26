@@ -1,23 +1,3 @@
-# Input: subscribe to uats.application.created events
-resource "google_pubsub_topic" "uats_application_created" {
-  name = "uats.application.created"
-
-  depends_on = [google_project_service.apis]
-}
-
-# Output: scoring service publishes score results
-resource "google_pubsub_topic" "carv_score_calculated" {
-  name = "carv.score.calculated"
-
-  depends_on = [google_project_service.apis]
-}
-
-resource "google_pubsub_topic" "carv_score_failed" {
-  name = "carv.score.failed"
-
-  depends_on = [google_project_service.apis]
-}
-
 # Dead-letter topic for failed scoring attempts
 resource "google_pubsub_topic" "scoring_dlq" {
   name = "scoring-dlq"
@@ -28,7 +8,7 @@ resource "google_pubsub_topic" "scoring_dlq" {
 # Push subscription: uats.application.created → scoring worker
 resource "google_pubsub_subscription" "scoring_push" {
   name  = "scoring-worker-push"
-  topic = google_pubsub_topic.uats_application_created.id
+  topic = var.input_topic_id
 
   ack_deadline_seconds = 300
 
@@ -54,6 +34,8 @@ resource "google_pubsub_subscription" "scoring_push" {
 }
 
 # Pub/Sub needs publisher role on DLQ topic to forward dead-lettered messages
+data "google_project" "current" {}
+
 resource "google_pubsub_topic_iam_member" "dlq_publisher" {
   topic  = google_pubsub_topic.scoring_dlq.id
   role   = "roles/pubsub.publisher"
@@ -76,5 +58,3 @@ resource "google_pubsub_subscription" "scoring_dlq_pull" {
 
   depends_on = [google_project_service.apis]
 }
-
-data "google_project" "current" {}

@@ -1,13 +1,5 @@
-resource "google_firestore_database" "default" {
-  name        = "(default)"
-  location_id = var.region
-  type        = "FIRESTORE_NATIVE"
-
-  depends_on = [google_project_service.apis]
-}
-
 resource "google_firestore_index" "scoring_results_by_vacancy_score" {
-  database   = google_firestore_database.default.name
+  database   = var.firestore_database_name
   collection = "scoring_results"
 
   fields {
@@ -21,7 +13,7 @@ resource "google_firestore_index" "scoring_results_by_vacancy_score" {
 }
 
 resource "google_firestore_index" "scoring_results_by_candidate_time" {
-  database   = google_firestore_database.default.name
+  database   = var.firestore_database_name
   collection = "scoring_results"
 
   fields {
