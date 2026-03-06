@@ -57,6 +57,11 @@ variable "score_failed_topic_id" {
   type        = string
 }
 
+variable "scoring_dlq_topic_id" {
+  description = "Pub/Sub topic ID for the scoring dead-letter queue"
+  type        = string
+}
+
 variable "firestore_database_name" {
   description = "Firestore database name"
   type        = string

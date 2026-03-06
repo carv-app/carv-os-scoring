@@ -21,7 +21,7 @@ resource "google_pubsub_subscription" "scoring_push" {
   }
 
   dead_letter_policy {
-    dead_letter_topic     = google_pubsub_topic.scoring_dlq.id
+    dead_letter_topic     = var.scoring_dlq_topic_id
     max_delivery_attempts = 5
   }
 
@@ -30,7 +30,7 @@ resource "google_pubsub_subscription" "scoring_push" {
 
 # Pub/Sub needs publisher role on DLQ topic to forward dead-lettered messages
 resource "google_pubsub_topic_iam_member" "dlq_publisher" {
-  topic  = google_pubsub_topic.scoring_dlq.id
+  topic  = var.scoring_dlq_topic_id
   role   = "roles/pubsub.publisher"
   member = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
 }
@@ -45,7 +45,7 @@ resource "google_pubsub_subscription_iam_member" "main_subscriber" {
 # DLQ pull subscription for monitoring/draining dead-lettered messages
 resource "google_pubsub_subscription" "scoring_dlq_pull" {
   name  = "scoring-dlq-pull"
-  topic = google_pubsub_topic.scoring_dlq.id
+  topic = var.scoring_dlq_topic_id
 
   ack_deadline_seconds = 60
 
