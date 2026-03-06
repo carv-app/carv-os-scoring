@@ -5,7 +5,7 @@ output "cloud_run_url" {
 
 output "input_topic" {
   description = "Pub/Sub topic the scoring worker subscribes to"
-  value       = google_pubsub_topic.uats_application_created.name
+  value       = google_pubsub_topic.uats_application_upserted.name
 }
 
 output "score_calculated_topic" {

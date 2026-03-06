@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = {"env_prefix": "", "case_sensitive": False, "env_file": ".env"}
 
     # GCP
-    gcp_project_id: str
+    gcp_project_id: str = "carv-app-dev"
     gcp_region: str = "europe-west1"
 
     # Gemini
@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     # Pub/Sub topics (for publishing score events)
     score_calculated_topic: str = "carv.score.calculated"
     score_failed_topic: str = "carv.score.failed"
+
+    # GCS
+    gcs_bucket: str = "carv-dev-ats-candidate-documents"
+
+    # Service identity
+    source_service: str = "carv-os-scoring"
 
     # Observability
     otel_enabled: bool = True

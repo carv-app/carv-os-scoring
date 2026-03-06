@@ -34,6 +34,14 @@ resource "google_cloud_run_v2_service" "scoring_worker" {
         value = var.region
       }
       env {
+        name  = "GCS_BUCKET"
+        value = var.gcs_bucket
+      }
+      env {
+        name  = "SOURCE_SERVICE"
+        value = "carv-os-scoring"
+      }
+      env {
         name  = "OTEL_ENABLED"
         value = "true"
       }

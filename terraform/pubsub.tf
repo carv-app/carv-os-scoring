@@ -1,19 +1,27 @@
-# Input: subscribe to uats.application.created events
-resource "google_pubsub_topic" "uats_application_created" {
-  name = "uats.application.created"
+# Input: subscribe to uats.application.upserted events
+resource "google_pubsub_topic" "uats_application_upserted" {
+  name = "uats.application.upserted"
 
   depends_on = [google_project_service.apis]
 }
 
-# Output: scoring service publishes score results
+# Output: scoring service publishes score results (ordering by workspace_id)
 resource "google_pubsub_topic" "carv_score_calculated" {
   name = "carv.score.calculated"
+
+  message_storage_policy {
+    allowed_persistence_regions = [var.region]
+  }
 
   depends_on = [google_project_service.apis]
 }
 
 resource "google_pubsub_topic" "carv_score_failed" {
   name = "carv.score.failed"
+
+  message_storage_policy {
+    allowed_persistence_regions = [var.region]
+  }
 
   depends_on = [google_project_service.apis]
 }
@@ -25,10 +33,12 @@ resource "google_pubsub_topic" "scoring_dlq" {
   depends_on = [google_project_service.apis]
 }
 
-# Push subscription: uats.application.created → scoring worker
+# Push subscription: uats.application.upserted → scoring worker
 resource "google_pubsub_subscription" "scoring_push" {
   name  = "scoring-worker-push"
-  topic = google_pubsub_topic.uats_application_created.id
+  topic = google_pubsub_topic.uats_application_upserted.id
+
+  enable_message_ordering = true
 
   ack_deadline_seconds = 300
 

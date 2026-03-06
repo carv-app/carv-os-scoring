@@ -55,7 +55,11 @@ async def lifespan(app: FastAPI):
         logger.info("otel_initialized")
 
     app.state.firestore_client = AsyncClient(project=settings.gcp_project_id)
-    app.state.publisher_client = pubsub_v1.PublisherClient()
+    app.state.publisher_client = pubsub_v1.PublisherClient(
+        publisher_options=pubsub_v1.types.PublisherOptions(
+            enable_message_ordering=True,
+        )
+    )
 
     # Auto-create topics when running against the Pub/Sub emulator
     if os.environ.get("PUBSUB_EMULATOR_HOST"):
