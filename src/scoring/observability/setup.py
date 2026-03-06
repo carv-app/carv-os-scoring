@@ -32,4 +32,4 @@ def init_observability(settings: Settings) -> None:
     metrics.set_meter_provider(meter_provider)
 
     # Auto-instrument FastAPI
-    FastAPIInstrumentor.instrument()
+    FastAPIInstrumentor().instrument()
