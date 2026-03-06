@@ -1,8 +1,6 @@
-# Input: subscribe to uats.application.upserted events
-resource "google_pubsub_topic" "uats_application_upserted" {
+# Input: existing topic managed by UATS — we only subscribe to it
+data "google_pubsub_topic" "uats_application_upserted" {
   name = "uats.application.upserted"
-
-  depends_on = [google_project_service.apis]
 }
 
 # Output: scoring service publishes score results (ordering by workspace_id)
@@ -36,7 +34,7 @@ resource "google_pubsub_topic" "scoring_dlq" {
 # Push subscription: uats.application.upserted → scoring worker
 resource "google_pubsub_subscription" "scoring_push" {
   name  = "scoring-worker-push"
-  topic = google_pubsub_topic.uats_application_upserted.id
+  topic = data.google_pubsub_topic.uats_application_upserted.id
 
   enable_message_ordering = true
 
