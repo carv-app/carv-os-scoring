@@ -72,6 +72,7 @@ async def process_candidate(
             "status": "ok",
             "application_id": after.application_id,
             "score": result.score,
+            "reasoning": result.reasoning,
         }
     except Exception as e:
         logger.error(

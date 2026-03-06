@@ -79,20 +79,25 @@ def _build_files_payload(bucket: str, workspace_id: str, candidate_id: str) -> d
     }
 
 
-def hardcoded_test(url: str, bucket: str):
+def hardcoded_test(url: str, bucket: str, include_files: bool):
     """Send a hardcoded fake event — no GCP auth needed."""
     print("--- Hardcoded test (fake data) ---")
+    files = None
+    if include_files:
+        files = _build_files_payload(bucket, "workspace-001", "candidate-001")
     envelope = build_envelope(
         application_id="app-test-001",
         candidate_id="candidate-001",
         vacancy_id="vacancy-001",
         workspace_id="workspace-001",
-        files=_build_files_payload(bucket, "workspace-001", "candidate-001"),
+        files=files,
     )
     send(url, envelope)
 
 
-def from_application(url: str, workspace_id: str, application_id: str, bucket: str):
+def from_application(
+    url: str, workspace_id: str, application_id: str, bucket: str, include_files: bool,
+):
     """Read a real application from Firestore and send it."""
     from google.cloud import firestore
 
@@ -117,12 +122,13 @@ def from_application(url: str, workspace_id: str, application_id: str, bucket: s
     print(f"  vacancy:   {vacancy_id}")
     print(f"  status:    {data.get('status')}")
 
+    files = _build_files_payload(bucket, workspace_id, candidate_id) if include_files else None
     envelope = build_envelope(
         application_id=data["id"],
         candidate_id=candidate_id,
         vacancy_id=vacancy_id,
         workspace_id=workspace_id,
-        files=_build_files_payload(bucket, workspace_id, candidate_id),
+        files=files,
     )
     send(url, envelope)
 
@@ -133,6 +139,7 @@ def from_ids(
     candidate_id: str,
     vacancy_id: str,
     bucket: str,
+    include_files: bool,
 ):
     """Send an event from explicit IDs."""
     print("--- From explicit IDs ---")
@@ -140,12 +147,13 @@ def from_ids(
     print(f"  candidate: {candidate_id}")
     print(f"  vacancy:   {vacancy_id}")
 
+    files = _build_files_payload(bucket, workspace_id, candidate_id) if include_files else None
     envelope = build_envelope(
         application_id=f"app-{candidate_id}-{vacancy_id}",
         candidate_id=candidate_id,
         vacancy_id=vacancy_id,
         workspace_id=workspace_id,
-        files=_build_files_payload(bucket, workspace_id, candidate_id),
+        files=files,
     )
     send(url, envelope)
 
@@ -190,6 +198,12 @@ def main():
         default=DEFAULT_BUCKET,
         help=f"GCS bucket for candidate documents (default: {DEFAULT_BUCKET})",
     )
+    parser.add_argument(
+        "--files",
+        action="store_true",
+        default=False,
+        help="Include GCS file URIs in the event (requires files to exist in the bucket)",
+    )
     args = parser.parse_args()
 
     if args.application:
@@ -197,11 +211,11 @@ def main():
         if len(parts) != 2:
             print("--application must be WORKSPACE_ID/APPLICATION_ID")
             sys.exit(1)
-        from_application(args.url, parts[0], parts[1], args.bucket)
+        from_application(args.url, parts[0], parts[1], args.bucket, args.files)
     elif args.workspace and args.candidate and args.vacancy:
-        from_ids(args.url, args.workspace, args.candidate, args.vacancy, args.bucket)
+        from_ids(args.url, args.workspace, args.candidate, args.vacancy, args.bucket, args.files)
     else:
-        hardcoded_test(args.url, args.bucket)
+        hardcoded_test(args.url, args.bucket, args.files)
 
 
 if __name__ == "__main__":
