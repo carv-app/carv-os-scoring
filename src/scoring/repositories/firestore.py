@@ -57,7 +57,7 @@ class FirestoreRepository:
             docs_ref = (
                 self._client.collection("Workspaces")
                 .document(workspace_id)
-                .collection("Candidate")
+                .collection("Candidates")
                 .document(candidate_reference_id)
                 .collection("AtsDocuments")
             )
@@ -67,6 +67,30 @@ class FirestoreRepository:
                 if data:
                     merged.update(data)
             return AtsDocuments(**merged)
+
+    async def get_ats_document_file_uris(
+        self, workspace_id: str, candidate_reference_id: str
+    ) -> list[str]:
+        """Extract GCS URIs from AtsDocuments subcollection."""
+        with tracer.start_as_current_span("firestore.get_ats_document_file_uris"):
+            docs_ref = (
+                self._client.collection("Workspaces")
+                .document(workspace_id)
+                .collection("Candidates")
+                .document(candidate_reference_id)
+                .collection("AtsDocuments")
+            )
+            uris: list[str] = []
+            async for doc in docs_ref.stream():
+                data = doc.to_dict()
+                if not data:
+                    continue
+                content = data.get("content", {})
+                ext_storage = content.get("externalStorage", {})
+                gcs_uri = ext_storage.get("gcsUri")
+                if gcs_uri:
+                    uris.append(gcs_uri)
+            return uris
 
     async def save_scoring_result(self, result: ScoringResult) -> str:
         with tracer.start_as_current_span("firestore.save_result"):

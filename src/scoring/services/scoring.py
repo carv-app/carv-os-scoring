@@ -55,6 +55,18 @@ class ScoringService:
                     self._repo.get_ats_documents(workspace_id, candidate_reference_id),
                 )
 
+                # Fallback: if no file URIs from the event, check ATS documents
+                if not file_uris:
+                    file_uris = await self._repo.get_ats_document_file_uris(
+                        workspace_id, candidate_reference_id
+                    )
+                    if file_uris:
+                        logger.info(
+                            "file_uris_from_ats_documents",
+                            count=len(file_uris),
+                            uris=file_uris,
+                        )
+
                 start = time.monotonic()
                 llm_response, token_usage = await self._llm.score_candidate(
                     candidate, vacancy, ats_documents, file_uris=file_uris
