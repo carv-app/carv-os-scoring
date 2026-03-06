@@ -1,14 +1,9 @@
-# Dead-letter topic for failed scoring attempts
-resource "google_pubsub_topic" "scoring_dlq" {
-  name = "scoring-dlq"
-
-  depends_on = [google_project_service.apis]
-}
-
-# Push subscription: uats.application.created → scoring worker
+# Push subscription: uats.application.upserted → scoring worker
 resource "google_pubsub_subscription" "scoring_push" {
   name  = "scoring-worker-push"
   topic = var.input_topic_id
+
+  enable_message_ordering = true
 
   ack_deadline_seconds = 300
 
@@ -34,8 +29,6 @@ resource "google_pubsub_subscription" "scoring_push" {
 }
 
 # Pub/Sub needs publisher role on DLQ topic to forward dead-lettered messages
-data "google_project" "current" {}
-
 resource "google_pubsub_topic_iam_member" "dlq_publisher" {
   topic  = google_pubsub_topic.scoring_dlq.id
   role   = "roles/pubsub.publisher"
@@ -58,3 +51,5 @@ resource "google_pubsub_subscription" "scoring_dlq_pull" {
 
   depends_on = [google_project_service.apis]
 }
+
+data "google_project" "current" {}

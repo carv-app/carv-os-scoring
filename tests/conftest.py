@@ -5,6 +5,7 @@ import pytest
 # Set required env vars before any imports that trigger Settings
 os.environ.setdefault("GCP_PROJECT_ID", "test-project")
 os.environ.setdefault("GCP_REGION", "europe-west1")
+os.environ.setdefault("GCS_BUCKET", "test-bucket")
 os.environ.setdefault("OTEL_ENABLED", "false")
 
 
@@ -15,6 +16,7 @@ def settings():
     return Settings(
         gcp_project_id="test-project",
         gcp_region="europe-west1",
+        gcs_bucket="test-bucket",
         otel_enabled=False,
     )
 

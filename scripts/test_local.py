@@ -22,55 +22,82 @@ import base64
 import json
 import sys
 from datetime import UTC, datetime
+from uuid import uuid4
 
 import requests
+
+DEFAULT_BUCKET = "carv-dev-ats-candidate-documents"
 
 
 def build_envelope(
     application_id: str,
-    candidate_reference_id: str,
-    vacancy_reference_id: str,
+    candidate_id: str,
+    vacancy_id: str,
     workspace_id: str,
+    files: dict | None = None,
 ) -> dict:
-    event = {
-        "eventName": "uats.application.created",
-        "workspaceId": workspace_id,
-        "integrationId": "local-test",
-        "timestamp": datetime.now(UTC).isoformat(),
-        "data": [
-            {
-                "id": application_id,
-                "candidateReferenceId": candidate_reference_id,
-                "vacancyReferenceId": vacancy_reference_id,
-                "status": "new",
-                "workspaceId": workspace_id,
-            },
-        ],
+    now = datetime.now(UTC).isoformat()
+    after = {
+        "application_id": application_id,
+        "candidate_id": candidate_id,
+        "vacancy_id": vacancy_id,
+    }
+    if files:
+        after["files"] = files
+    payload = {
+        "data": {
+            "before": None,
+            "after": after,
+        },
+        "error": None,
     }
     return {
         "message": {
-            "data": base64.b64encode(json.dumps(event).encode()).decode(),
-            "attributes": {},
+            "data": base64.b64encode(json.dumps(payload).encode()).decode(),
+            "attributes": {
+                "event_id": str(uuid4()),
+                "event_type": "uats.application.upserted",
+                "status": "success",
+                "workspace_id": workspace_id,
+                "timestamp": now,
+                "source_service": "local-test",
+            },
             "messageId": f"local-{application_id}",
-            "publishTime": datetime.now(UTC).isoformat(),
+            "publishTime": now,
         },
         "subscription": "projects/local/subscriptions/test",
     }
 
 
-def hardcoded_test(url: str):
+def _build_files_payload(bucket: str, workspace_id: str, candidate_id: str) -> dict:
+    """Build a files dict with a resume GCS URI."""
+    gcs_uri = f"gs://{bucket}/{workspace_id}/{candidate_id}/resume.pdf"
+    return {
+        "resume": {
+            "external_storage": {"gcs_uri": gcs_uri},
+        },
+    }
+
+
+def hardcoded_test(url: str, bucket: str, include_files: bool):
     """Send a hardcoded fake event — no GCP auth needed."""
     print("--- Hardcoded test (fake data) ---")
+    files = None
+    if include_files:
+        files = _build_files_payload(bucket, "workspace-001", "candidate-001")
     envelope = build_envelope(
         application_id="app-test-001",
-        candidate_reference_id="candidate-001",
-        vacancy_reference_id="vacancy-001",
+        candidate_id="candidate-001",
+        vacancy_id="vacancy-001",
         workspace_id="workspace-001",
+        files=files,
     )
     send(url, envelope)
 
 
-def from_application(url: str, workspace_id: str, application_id: str):
+def from_application(
+    url: str, workspace_id: str, application_id: str, bucket: str, include_files: bool,
+):
     """Read a real application from Firestore and send it."""
     from google.cloud import firestore
 
@@ -89,15 +116,19 @@ def from_application(url: str, workspace_id: str, application_id: str):
         sys.exit(1)
 
     data = doc.to_dict()
-    print(f"  candidate: {data.get('candidateReferenceId')}")
-    print(f"  vacancy:   {data.get('vacancyReferenceId')}")
+    candidate_id = data["candidateReferenceId"]
+    vacancy_id = data["vacancyReferenceId"]
+    print(f"  candidate: {candidate_id}")
+    print(f"  vacancy:   {vacancy_id}")
     print(f"  status:    {data.get('status')}")
 
+    files = _build_files_payload(bucket, workspace_id, candidate_id) if include_files else None
     envelope = build_envelope(
         application_id=data["id"],
-        candidate_reference_id=data["candidateReferenceId"],
-        vacancy_reference_id=data["vacancyReferenceId"],
+        candidate_id=candidate_id,
+        vacancy_id=vacancy_id,
         workspace_id=workspace_id,
+        files=files,
     )
     send(url, envelope)
 
@@ -105,20 +136,24 @@ def from_application(url: str, workspace_id: str, application_id: str):
 def from_ids(
     url: str,
     workspace_id: str,
-    candidate_reference_id: str,
-    vacancy_reference_id: str,
+    candidate_id: str,
+    vacancy_id: str,
+    bucket: str,
+    include_files: bool,
 ):
     """Send an event from explicit IDs."""
     print("--- From explicit IDs ---")
     print(f"  workspace: {workspace_id}")
-    print(f"  candidate: {candidate_reference_id}")
-    print(f"  vacancy:   {vacancy_reference_id}")
+    print(f"  candidate: {candidate_id}")
+    print(f"  vacancy:   {vacancy_id}")
 
+    files = _build_files_payload(bucket, workspace_id, candidate_id) if include_files else None
     envelope = build_envelope(
-        application_id=f"app-{candidate_reference_id}-{vacancy_reference_id}",
-        candidate_reference_id=candidate_reference_id,
-        vacancy_reference_id=vacancy_reference_id,
+        application_id=f"app-{candidate_id}-{vacancy_id}",
+        candidate_id=candidate_id,
+        vacancy_id=vacancy_id,
         workspace_id=workspace_id,
+        files=files,
     )
     send(url, envelope)
 
@@ -158,6 +193,17 @@ def main():
     parser.add_argument("--workspace", help="Workspace ID")
     parser.add_argument("--candidate", help="Candidate reference ID")
     parser.add_argument("--vacancy", help="Vacancy reference ID")
+    parser.add_argument(
+        "--bucket",
+        default=DEFAULT_BUCKET,
+        help=f"GCS bucket for candidate documents (default: {DEFAULT_BUCKET})",
+    )
+    parser.add_argument(
+        "--files",
+        action="store_true",
+        default=False,
+        help="Include GCS file URIs in the event (requires files to exist in the bucket)",
+    )
     args = parser.parse_args()
 
     if args.application:
@@ -165,11 +211,11 @@ def main():
         if len(parts) != 2:
             print("--application must be WORKSPACE_ID/APPLICATION_ID")
             sys.exit(1)
-        from_application(args.url, parts[0], parts[1])
+        from_application(args.url, parts[0], parts[1], args.bucket, args.files)
     elif args.workspace and args.candidate and args.vacancy:
-        from_ids(args.url, args.workspace, args.candidate, args.vacancy)
+        from_ids(args.url, args.workspace, args.candidate, args.vacancy, args.bucket, args.files)
     else:
-        hardcoded_test(args.url)
+        hardcoded_test(args.url, args.bucket, args.files)
 
 
 if __name__ == "__main__":

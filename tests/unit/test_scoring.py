@@ -35,8 +35,10 @@ def mock_publisher():
 
 
 @pytest.mark.asyncio
-async def test_process_success(mock_repo, mock_llm, mock_publisher):
-    service = ScoringService(repo=mock_repo, llm=mock_llm, publisher=mock_publisher)
+async def test_process_success(mock_repo, mock_llm, mock_publisher, settings):
+    service = ScoringService(
+        repo=mock_repo, llm=mock_llm, publisher=mock_publisher, settings=settings
+    )
 
     with patch("scoring.services.scoring.record_scoring"), patch(
         "scoring.services.scoring.record_failure"
@@ -58,11 +60,41 @@ async def test_process_success(mock_repo, mock_llm, mock_publisher):
     mock_repo.save_scoring_result.assert_awaited_once()
     mock_publisher.publish_score_calculated.assert_called_once()
 
+    # Verify new event format
+    call_kwargs = mock_publisher.publish_score_calculated.call_args
+    assert "payload" in call_kwargs.kwargs
+    assert "attributes" in call_kwargs.kwargs
+    assert call_kwargs.kwargs["attributes"].event_type == "carv.score.calculated"
+    assert call_kwargs.kwargs["attributes"].workspace_id == "ws-1"
+    assert call_kwargs.kwargs["payload"].data["application_id"] == "app-1"
+
 
 @pytest.mark.asyncio
-async def test_process_firestore_error(mock_repo, mock_llm, mock_publisher):
+async def test_process_with_file_uris(mock_repo, mock_llm, mock_publisher, settings):
+    service = ScoringService(
+        repo=mock_repo, llm=mock_llm, publisher=mock_publisher, settings=settings
+    )
+
+    with patch("scoring.services.scoring.record_scoring"), patch(
+        "scoring.services.scoring.record_failure"
+    ):
+        result = await service.process(
+            "app-1", "cand-1", "vac-1", "ws-1",
+            file_uris=["gs://bucket/resume.pdf"],
+        )
+
+    assert result.score == 65
+    mock_llm.score_candidate.assert_awaited_once()
+    call_kwargs = mock_llm.score_candidate.call_args
+    assert call_kwargs.kwargs["file_uris"] == ["gs://bucket/resume.pdf"]
+
+
+@pytest.mark.asyncio
+async def test_process_firestore_error(mock_repo, mock_llm, mock_publisher, settings):
     mock_repo.get_candidate.side_effect = ValueError("Candidate not found")
-    service = ScoringService(repo=mock_repo, llm=mock_llm, publisher=mock_publisher)
+    service = ScoringService(
+        repo=mock_repo, llm=mock_llm, publisher=mock_publisher, settings=settings
+    )
 
     with patch("scoring.services.scoring.record_scoring"), patch(
         "scoring.services.scoring.record_failure"
@@ -74,9 +106,11 @@ async def test_process_firestore_error(mock_repo, mock_llm, mock_publisher):
 
 
 @pytest.mark.asyncio
-async def test_process_llm_error(mock_repo, mock_llm, mock_publisher):
+async def test_process_llm_error(mock_repo, mock_llm, mock_publisher, settings):
     mock_llm.score_candidate.side_effect = RuntimeError("Gemini timeout")
-    service = ScoringService(repo=mock_repo, llm=mock_llm, publisher=mock_publisher)
+    service = ScoringService(
+        repo=mock_repo, llm=mock_llm, publisher=mock_publisher, settings=settings
+    )
 
     with patch("scoring.services.scoring.record_scoring"), patch(
         "scoring.services.scoring.record_failure"

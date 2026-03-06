@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -17,50 +19,57 @@ class PubSubEnvelope(BaseModel):
     subscription: str = ""
 
 
-# --- UATS event models ---
+# --- Event bus models (new format) ---
 
 
-class ATSCandidateVacancyApplication(BaseModel):
-    id: str
-    candidate_reference_id: str = Field(alias="candidateReferenceId")
-    vacancy_reference_id: str = Field(alias="vacancyReferenceId")
-    status: str = ""
-    workspace_id: str = Field(alias="workspaceId", default="")
+class EventAttributes(BaseModel):
+    event_id: UUID
+    event_type: str
+    status: Literal["success", "failure"]
+    workspace_id: str
+    timestamp: datetime
+    source_service: str
 
-    model_config = {"populate_by_name": True}
+    def to_pubsub_attributes(self) -> dict[str, str]:
+        return {k: str(v) for k, v in self.model_dump(mode="json").items()}
 
-
-class UATSEvent(BaseModel):
-    event_name: str = Field(alias="eventName")
-    workspace_id: str = Field(alias="workspaceId")
-    integration_id: str = Field(alias="integrationId", default="")
-    timestamp: str = ""
-    data: dict = Field(default_factory=dict)
-
-    model_config = {"populate_by_name": True}
+    @classmethod
+    def from_pubsub_attributes(cls, attrs: dict[str, str]) -> "EventAttributes":
+        return cls.model_validate(attrs)
 
 
-# --- Score event (published by this service) ---
+class EventPayload(BaseModel):
+    data: dict[str, Any] | None = None
+    error: dict[str, Any] | None = None
 
 
-class ScoreCalculatedEventData(BaseModel):
-    application_id: str = Field(serialization_alias="applicationId")
-    candidate_id: str = Field(serialization_alias="candidateId")
-    vacancy_id: str = Field(serialization_alias="vacancyId")
+# --- Incoming application models ---
+
+
+class ApplicationSnapshot(BaseModel):
+    application_id: str
+    candidate_id: str
+    vacancy_id: str
+    files: dict[str, Any] | None = None
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class ApplicationUpsertedData(BaseModel):
+    before: ApplicationSnapshot | None = None
+    after: ApplicationSnapshot | None = None
+
+
+# --- Outgoing score event data (snake_case) ---
+
+
+class ScoreCalculatedData(BaseModel):
+    application_id: str
+    candidate_id: str
+    vacancy_id: str
     score: int
     reasoning: str
     model: str
-
-    model_config = {"populate_by_name": True}
-
-
-class ScoreEvent(BaseModel):
-    event_name: str = Field(serialization_alias="eventName")
-    workspace_id: str = Field(serialization_alias="workspaceId")
-    timestamp: str
-    data: dict
-
-    model_config = {"populate_by_name": True}
 
 
 # --- Firestore ATS document models ---

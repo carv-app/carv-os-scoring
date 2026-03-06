@@ -33,6 +33,13 @@ resource "google_project_iam_member" "scoring_vertex_ai" {
   member  = "serviceAccount:${google_service_account.scoring_service.email}"
 }
 
+# GCS object reader (for candidate document PDFs passed to Gemini)
+resource "google_storage_bucket_iam_member" "scoring_gcs_reader" {
+  bucket = var.gcs_bucket
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.scoring_service.email}"
+}
+
 # Pub/Sub publisher (for carv.score.* events)
 resource "google_pubsub_topic_iam_member" "scoring_publish_calculated" {
   topic  = var.score_calculated_topic_id

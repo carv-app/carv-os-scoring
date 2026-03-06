@@ -1,10 +1,15 @@
-"""Test that models deserialize correctly from camelCase Firestore data."""
+"""Test that models deserialize correctly from camelCase Firestore data and new event bus format."""
+
+from datetime import UTC, datetime
+from uuid import uuid4
 
 from scoring.models import (
+    ApplicationUpsertedData,
     ATSCandidate,
-    ATSCandidateVacancyApplication,
     AtsDocuments,
     ATSVacancy,
+    EventAttributes,
+    ScoreCalculatedData,
 )
 
 
@@ -91,20 +96,91 @@ def test_ats_documents_empty():
     assert docs.assessment is None
 
 
-def test_application_from_event_data():
-    """ATSCandidateVacancyApplication from camelCase event data."""
-    data = {
-        "id": "1910930",
-        "candidateReferenceId": "aUFe1f8g84GGORCL",
-        "vacancyReferenceId": "aIil3cRwkMsuC-pC",
-        "status": "05. Interview",
-        "workspaceId": "JSiKKjiSDmZoX7Zfk2qG",
+def test_event_attributes_from_pubsub_attributes():
+    eid = str(uuid4())
+    now = datetime.now(UTC).isoformat()
+    attrs = {
+        "event_id": eid,
+        "event_type": "uats.application.upserted",
+        "status": "success",
+        "workspace_id": "ws-1",
+        "timestamp": now,
+        "source_service": "carv-os-scoring",
     }
-    app = ATSCandidateVacancyApplication(**data)
-    assert app.id == "1910930"
-    assert app.candidate_reference_id == "aUFe1f8g84GGORCL"
-    assert app.vacancy_reference_id == "aIil3cRwkMsuC-pC"
-    assert app.workspace_id == "JSiKKjiSDmZoX7Zfk2qG"
+    parsed = EventAttributes.from_pubsub_attributes(attrs)
+    assert str(parsed.event_id) == eid
+    assert parsed.event_type == "uats.application.upserted"
+    assert parsed.status == "success"
+    assert parsed.workspace_id == "ws-1"
+    assert parsed.source_service == "carv-os-scoring"
+
+
+def test_event_attributes_to_pubsub_attributes():
+    eid = uuid4()
+    now = datetime.now(UTC)
+    attrs = EventAttributes(
+        event_id=eid,
+        event_type="carv.score.calculated",
+        status="success",
+        workspace_id="ws-1",
+        timestamp=now,
+        source_service="carv-os-scoring",
+    )
+    result = attrs.to_pubsub_attributes()
+    assert isinstance(result, dict)
+    assert all(isinstance(v, str) for v in result.values())
+    assert result["event_id"] == str(eid)
+    assert result["event_type"] == "carv.score.calculated"
+    assert result["workspace_id"] == "ws-1"
+
+
+def test_application_upserted_data_parsing():
+    data = {
+        "before": None,
+        "after": {
+            "application_id": "app-1",
+            "candidate_id": "cand-1",
+            "vacancy_id": "vac-1",
+            "files": {
+                "resume": {
+                    "external_storage": {"gcs_uri": "gs://bucket/resume.pdf"}
+                }
+            },
+        },
+    }
+    upserted = ApplicationUpsertedData(**data)
+    assert upserted.before is None
+    assert upserted.after is not None
+    assert upserted.after.application_id == "app-1"
+    assert upserted.after.candidate_id == "cand-1"
+    assert upserted.after.vacancy_id == "vac-1"
+    assert upserted.after.files["resume"]["external_storage"]["gcs_uri"] == "gs://bucket/resume.pdf"
+
+
+def test_application_upserted_data_deletion():
+    data = {
+        "before": {"application_id": "app-1", "candidate_id": "c", "vacancy_id": "v"},
+        "after": None,
+    }
+    upserted = ApplicationUpsertedData(**data)
+    assert upserted.after is None
+    assert upserted.before is not None
+
+
+def test_score_calculated_data_snake_case():
+    data = ScoreCalculatedData(
+        application_id="app-1",
+        candidate_id="cand-1",
+        vacancy_id="vac-1",
+        score=85,
+        reasoning="Great fit",
+        model="gemini-2.5-flash",
+    )
+    dumped = data.model_dump()
+    assert "application_id" in dumped
+    assert "candidate_id" in dumped
+    assert "vacancy_id" in dumped
+    assert dumped["score"] == 85
 
 
 def test_ats_vacancy_ignores_unknown_fields():
