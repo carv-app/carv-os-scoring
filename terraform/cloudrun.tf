@@ -42,6 +42,10 @@ resource "google_cloud_run_v2_service" "scoring_worker" {
         value = "carv-os-scoring"
       }
       env {
+        name  = "EVENT_BUS_TOPIC"
+        value = var.outgoing_topic_name
+      }
+      env {
         name  = "OTEL_ENABLED"
         value = "true"
       }

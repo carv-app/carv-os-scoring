@@ -13,9 +13,8 @@ class Settings(BaseSettings):
     gemini_temperature: float = 0.1
     gemini_max_tokens: int = 16384 #65535 default
 
-    # Pub/Sub topics (for publishing score events)
-    score_calculated_topic: str = "carv.score.calculated"
-    score_failed_topic: str = "carv.score.failed"
+    # Pub/Sub topic (shared event bus)
+    event_bus_topic: str = "carv-events-dev"
 
     # GCS
     gcs_bucket: str

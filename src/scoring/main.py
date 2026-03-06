@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
         _ensure_emulator_topics(
             app.state.publisher_client,
             settings.gcp_project_id,
-            [settings.score_calculated_topic, settings.score_failed_topic],
+            [settings.event_bus_topic],
         )
         logger.info(
             "pubsub_emulator_mode",

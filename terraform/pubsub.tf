@@ -1,7 +1,7 @@
 # Push subscription: carv-events-dev → scoring worker (filtered for uats events)
 resource "google_pubsub_subscription" "scoring_push" {
   name  = "scoring-worker-push"
-  topic = var.input_topic_id
+  topic = var.incoming_topic_id
 
   filter = "attributes.event_type = \"uats.application.upserted\""
 

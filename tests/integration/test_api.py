@@ -80,7 +80,7 @@ def test_process_candidate_success(
     )
 
     mock_publisher = MagicMock()
-    mock_publisher.publish_score_calculated.return_value = "msg-out"
+    mock_publisher.publish.return_value = "msg-out"
 
     with patch("scoring.api.dependencies.FirestoreRepository", return_value=mock_repo), patch(
         "scoring.api.dependencies.LLMService", return_value=mock_llm
@@ -209,7 +209,7 @@ def test_process_candidate_with_file_uris(
     )
 
     mock_publisher = MagicMock()
-    mock_publisher.publish_score_calculated.return_value = "msg-out"
+    mock_publisher.publish.return_value = "msg-out"
 
     after_with_files = {
         "application_id": "app-1",

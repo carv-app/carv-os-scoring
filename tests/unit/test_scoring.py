@@ -30,7 +30,7 @@ def mock_llm(settings):
 @pytest.fixture
 def mock_publisher():
     publisher = MagicMock()
-    publisher.publish_score_calculated.return_value = "msg-123"
+    publisher.publish.return_value = "msg-123"
     return publisher
 
 
@@ -58,10 +58,10 @@ async def test_process_success(mock_repo, mock_llm, mock_publisher, settings):
     mock_repo.get_ats_documents.assert_awaited_once_with("ws-1", "cand-1")
     mock_llm.score_candidate.assert_awaited_once()
     mock_repo.save_scoring_result.assert_awaited_once()
-    mock_publisher.publish_score_calculated.assert_called_once()
+    mock_publisher.publish.assert_called_once()
 
     # Verify new event format
-    call_kwargs = mock_publisher.publish_score_calculated.call_args
+    call_kwargs = mock_publisher.publish.call_args
     assert "payload" in call_kwargs.kwargs
     assert "attributes" in call_kwargs.kwargs
     assert call_kwargs.kwargs["attributes"].event_type == "carv.score.calculated"
@@ -102,7 +102,7 @@ async def test_process_firestore_error(mock_repo, mock_llm, mock_publisher, sett
         await service.process("app-1", "bad-id", "vac-1", "ws-1")
 
     mock_llm.score_candidate.assert_not_awaited()
-    mock_publisher.publish_score_calculated.assert_not_called()
+    mock_publisher.publish.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -118,4 +118,4 @@ async def test_process_llm_error(mock_repo, mock_llm, mock_publisher, settings):
         await service.process("app-1", "cand-1", "vac-1", "ws-1")
 
     mock_repo.save_scoring_result.assert_not_awaited()
-    mock_publisher.publish_score_calculated.assert_not_called()
+    mock_publisher.publish.assert_not_called()

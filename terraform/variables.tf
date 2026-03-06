@@ -42,18 +42,18 @@ variable "alert_notification_channel" {
   default     = ""
 }
 
-variable "input_topic_id" {
-  description = "Pub/Sub topic ID for incoming application events"
+variable "incoming_topic_id" {
+  description = "Pub/Sub topic ID for incoming events (subscription source)"
   type        = string
 }
 
-variable "score_calculated_topic_id" {
-  description = "Pub/Sub topic ID for score calculated events"
+variable "outgoing_topic_id" {
+  description = "Pub/Sub topic ID for publishing outgoing events"
   type        = string
 }
 
-variable "score_failed_topic_id" {
-  description = "Pub/Sub topic ID for score failed events"
+variable "outgoing_topic_name" {
+  description = "Pub/Sub topic short name for publishing outgoing events (e.g. carv-events-dev)"
   type        = string
 }
 

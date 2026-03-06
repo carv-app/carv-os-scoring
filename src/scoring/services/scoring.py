@@ -108,7 +108,7 @@ class ScoringService:
                     source_service=self._settings.source_service,
                 )
                 payload = EventPayload(data=score_data.model_dump())
-                self._publisher.publish_score_calculated(payload=payload, attributes=attributes)
+                self._publisher.publish(payload=payload, attributes=attributes)
 
                 record_scoring(result, latency_ms)
 
