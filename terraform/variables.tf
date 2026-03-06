@@ -9,22 +9,6 @@ variable "region" {
   default     = "europe-west1"
 }
 
-variable "zone" {
-  description = "GCP zone"
-  type        = string
-  default     = ""
-}
-
-variable "cluster_name" {
-  description = "GKE cluster name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
-  type        = string
-}
-
 variable "scoring_image" {
   description = "Container image for the scoring worker"
   type        = string
