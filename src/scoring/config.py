@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = {"env_prefix": "", "case_sensitive": False, "env_file": ".env"}
 
     # GCP
-    gcp_project_id: str = "carv-app-dev"
+    gcp_project_id: str
     gcp_region: str = "europe-west1"
 
     # Gemini
@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     score_failed_topic: str = "carv.score.failed"
 
     # GCS
-    gcs_bucket: str = "carv-dev-ats-candidate-documents"
+    gcs_bucket: str
 
     # Service identity
     source_service: str = "carv-os-scoring"
