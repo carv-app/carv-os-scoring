@@ -25,15 +25,21 @@ class LLMService:
         candidate: ATSCandidate,
         vacancy: ATSVacancy,
         ats_documents: AtsDocuments,
+        file_uris: list[str] | None = None,
     ) -> tuple[LLMScoringResponse, dict]:
         with tracer.start_as_current_span("llm.score") as span:
             span.set_attribute("llm.model", self._settings.gemini_model)
 
             user_prompt = build_user_prompt(candidate, vacancy, ats_documents)
 
+            contents = []
+            for uri in (file_uris or []):
+                contents.append(types.Part.from_uri(file_uri=uri, mime_type="application/pdf"))
+            contents.append(user_prompt)
+
             response = await self._client.aio.models.generate_content(
                 model=self._settings.gemini_model,
-                contents=user_prompt,
+                contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
                     temperature=self._settings.gemini_temperature,

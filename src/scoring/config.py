@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     score_calculated_topic: str = "carv.score.calculated"
     score_failed_topic: str = "carv.score.failed"
 
+    # GCS
+    gcs_bucket: str
+
+    # Service identity
+    source_service: str = "carv-os-scoring"
+
     # Observability
     otel_enabled: bool = True
 

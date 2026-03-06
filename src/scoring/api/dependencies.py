@@ -21,4 +21,5 @@ def get_scoring_service(request: Request) -> ScoringService:
             client=request.app.state.publisher_client,
             settings=request.app.state.settings,
         ),
+        settings=request.app.state.settings,
     )
