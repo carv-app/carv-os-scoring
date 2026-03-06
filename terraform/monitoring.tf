@@ -18,11 +18,7 @@ resource "google_monitoring_alert_policy" "dlq_messages" {
     }
   }
 
-  dynamic "notification_channels" {
-    for_each = var.alert_notification_channel != "" ? [var.alert_notification_channel] : []
-    content {
-    }
-  }
+  notification_channels = var.alert_notification_channel != "" ? [var.alert_notification_channel] : []
 
   alert_strategy {
     auto_close = "1800s"
@@ -50,11 +46,7 @@ resource "google_monitoring_alert_policy" "high_error_rate" {
     }
   }
 
-  dynamic "notification_channels" {
-    for_each = var.alert_notification_channel != "" ? [var.alert_notification_channel] : []
-    content {
-    }
-  }
+  notification_channels = var.alert_notification_channel != "" ? [var.alert_notification_channel] : []
 
   alert_strategy {
     auto_close = "1800s"

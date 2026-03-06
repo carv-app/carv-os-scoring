@@ -42,13 +42,13 @@ resource "google_storage_bucket_iam_member" "scoring_gcs_reader" {
 
 # Pub/Sub publisher (for carv.score.* events)
 resource "google_pubsub_topic_iam_member" "scoring_publish_calculated" {
-  topic  = google_pubsub_topic.carv_score_calculated.id
+  topic  = var.score_calculated_topic_id
   role   = "roles/pubsub.publisher"
   member = "serviceAccount:${google_service_account.scoring_service.email}"
 }
 
 resource "google_pubsub_topic_iam_member" "scoring_publish_failed" {
-  topic  = google_pubsub_topic.carv_score_failed.id
+  topic  = var.score_failed_topic_id
   role   = "roles/pubsub.publisher"
   member = "serviceAccount:${google_service_account.scoring_service.email}"
 }

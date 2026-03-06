@@ -1,40 +1,7 @@
-# Input: existing topic managed by UATS — we only subscribe to it
-data "google_pubsub_topic" "uats_application_upserted" {
-  name = "uats.application.upserted"
-}
-
-# Output: scoring service publishes score results (ordering by workspace_id)
-resource "google_pubsub_topic" "carv_score_calculated" {
-  name = "carv.score.calculated"
-
-  message_storage_policy {
-    allowed_persistence_regions = [var.region]
-  }
-
-  depends_on = [google_project_service.apis]
-}
-
-resource "google_pubsub_topic" "carv_score_failed" {
-  name = "carv.score.failed"
-
-  message_storage_policy {
-    allowed_persistence_regions = [var.region]
-  }
-
-  depends_on = [google_project_service.apis]
-}
-
-# Dead-letter topic for failed scoring attempts
-resource "google_pubsub_topic" "scoring_dlq" {
-  name = "scoring-dlq"
-
-  depends_on = [google_project_service.apis]
-}
-
 # Push subscription: uats.application.upserted → scoring worker
 resource "google_pubsub_subscription" "scoring_push" {
   name  = "scoring-worker-push"
-  topic = data.google_pubsub_topic.uats_application_upserted.id
+  topic = var.input_topic_id
 
   enable_message_ordering = true
 
@@ -54,7 +21,7 @@ resource "google_pubsub_subscription" "scoring_push" {
   }
 
   dead_letter_policy {
-    dead_letter_topic     = google_pubsub_topic.scoring_dlq.id
+    dead_letter_topic     = var.scoring_dlq_topic_id
     max_delivery_attempts = 5
   }
 
@@ -63,7 +30,7 @@ resource "google_pubsub_subscription" "scoring_push" {
 
 # Pub/Sub needs publisher role on DLQ topic to forward dead-lettered messages
 resource "google_pubsub_topic_iam_member" "dlq_publisher" {
-  topic  = google_pubsub_topic.scoring_dlq.id
+  topic  = var.scoring_dlq_topic_id
   role   = "roles/pubsub.publisher"
   member = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
 }
@@ -78,7 +45,7 @@ resource "google_pubsub_subscription_iam_member" "main_subscriber" {
 # DLQ pull subscription for monitoring/draining dead-lettered messages
 resource "google_pubsub_subscription" "scoring_dlq_pull" {
   name  = "scoring-dlq-pull"
-  topic = google_pubsub_topic.scoring_dlq.id
+  topic = var.scoring_dlq_topic_id
 
   ack_deadline_seconds = 60
 
